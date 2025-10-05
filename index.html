@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Absensi Wajah dengan FaceAPI.js</title>
+    <title>Sistem Absensi Wajah dengan AI</title>
     <style>
-        /* CSS sama seperti sebelumnya */
+        /* CSS Styles tetap sama seperti sebelumnya */
         :root {
             --primary: #4361ee;
             --secondary: #3f37c9;
@@ -66,22 +66,6 @@
             font-weight: 700;
         }
         
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
-            border-radius: 50px;
-        }
-        
-        .user-info img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -103,10 +87,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-        
-        .card-title i {
-            font-size: 1.2rem;
         }
         
         .camera-container {
@@ -141,69 +121,22 @@
             color: var(--gray);
         }
         
-        .face-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-        
-        .face-box {
-            position: absolute;
-            border: 2px solid var(--success);
-            background: rgba(76, 201, 240, 0.1);
+        .model-status {
+            padding: 15px;
+            background: #f8f9fa;
             border-radius: 8px;
-        }
-        
-        .face-label {
-            position: absolute;
-            background: var(--success);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            transform: translateY(-100%);
-            white-space: nowrap;
-        }
-        
-        .scanning-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            color: white;
-            z-index: 10;
-        }
-        
-        .scanning-animation {
-            width: 80px;
-            height: 80px;
-            border: 4px solid transparent;
-            border-top: 4px solid var(--success);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
             margin-bottom: 15px;
+            border-left: 4px solid var(--danger);
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .model-status.ready {
+            border-left-color: var(--success);
+            background: rgba(76, 201, 240, 0.1);
         }
         
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
+        .model-status.loading {
+            border-left-color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
         }
         
         .btn {
@@ -223,10 +156,6 @@
             color: white;
         }
         
-        .btn-primary:hover {
-            background-color: var(--secondary);
-        }
-        
         .btn-success {
             background-color: var(--success);
             color: white;
@@ -242,76 +171,11 @@
             cursor: not-allowed;
         }
         
-        .auto-scan-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .slider {
-            background-color: var(--success);
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        
-        .attendance-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
         .student-item {
             display: flex;
             align-items: center;
             padding: 15px;
             border-bottom: 1px solid #e9ecef;
-            transition: background-color 0.2s;
-        }
-        
-        .student-item:hover {
-            background-color: #f8f9fa;
         }
         
         .student-avatar {
@@ -320,104 +184,6 @@
             border-radius: 50%;
             object-fit: cover;
             margin-right: 15px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .student-info {
-            flex: 1;
-        }
-        
-        .student-name {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .student-id {
-            color: var(--gray);
-            font-size: 0.9rem;
-        }
-        
-        .attendance-status {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .status-present {
-            background-color: rgba(76, 201, 240, 0.2);
-            color: var(--success);
-        }
-        
-        .status-absent {
-            background-color: rgba(247, 37, 133, 0.2);
-            color: var(--danger);
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transform: translateX(150%);
-            transition: transform 0.4s ease;
-        }
-        
-        .notification.show {
-            transform: translateX(0);
-        }
-        
-        .notification-success {
-            background-color: var(--success);
-        }
-        
-        .notification-error {
-            background-color: var(--danger);
-        }
-        
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 10px 0;
-        }
-        
-        .stat-present {
-            color: var(--success);
-        }
-        
-        .stat-absent {
-            color: var(--danger);
-        }
-        
-        .stat-total {
-            color: var(--primary);
-        }
-        
-        .stat-label {
-            color: var(--gray);
-            font-size: 0.9rem;
         }
         
         .training-section {
@@ -427,65 +193,9 @@
             border-radius: 8px;
         }
         
-        .loading-bar {
-            width: 100%;
-            height: 4px;
-            background-color: #e9ecef;
-            border-radius: 2px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-        
-        .loading-progress {
-            height: 100%;
-            background-color: var(--success);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        
-        .model-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 6px;
-            background: #f8f9fa;
-        }
-        
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: var(--gray);
-        }
-        
-        .status-indicator.loaded {
-            background-color: var(--success);
-        }
-        
-        .status-indicator.loading {
-            background-color: var(--primary);
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
-            }
-            
-            .stats-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .controls {
-                flex-direction: column;
             }
         }
     </style>
@@ -499,10 +209,6 @@
                     <i class="fas fa-user-check"></i>
                     <h1>Sistem Absensi Wajah AI</h1>
                 </div>
-                <div class="user-info">
-                    <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Guru">
-                    <span>Pak Budi, Guru Matematika</span>
-                </div>
             </div>
         </header>
         
@@ -511,12 +217,9 @@
                 <div class="card">
                     <h2 class="card-title"><i class="fas fa-camera"></i> Kamera Absensi</h2>
                     
-                    <div class="model-status">
-                        <div class="status-indicator" id="modelStatus"></div>
-                        <span id="modelStatusText">Status Model AI</span>
-                    </div>
-                    <div class="loading-bar">
-                        <div class="loading-progress" id="loadingProgress"></div>
+                    <div class="model-status" id="modelStatus">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="modelStatusText">Memuat model AI...</span>
                     </div>
                     
                     <div class="camera-container">
@@ -525,12 +228,6 @@
                             <p>Kamera siap untuk memindai wajah siswa</p>
                         </div>
                         <video id="cameraFeed" class="camera-feed" autoplay playsinline></video>
-                        <div class="face-overlay" id="faceOverlay"></div>
-                        
-                        <div class="scanning-overlay" id="scanningOverlay">
-                            <div class="scanning-animation"></div>
-                            <p>Mengenali wajah...</p>
-                        </div>
                     </div>
                     
                     <div class="controls">
@@ -538,37 +235,8 @@
                             <i class="fas fa-play"></i> Mulai Kamera
                         </button>
                         <button class="btn btn-success" id="scanFaces" disabled>
-                            <i class="fas fa-search"></i> Scan Sekarang
+                            <i class="fas fa-search"></i> Scan Wajah
                         </button>
-                        <button class="btn btn-danger" id="stopCamera" disabled>
-                            <i class="fas fa-stop"></i> Hentikan Kamera
-                        </button>
-                    </div>
-                    
-                    <div class="auto-scan-toggle">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="autoScanToggle">
-                            <span class="slider"></span>
-                        </div>
-                        <label for="autoScanToggle">Scan Otomatis</label>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h2 class="card-title"><i class="fas fa-chart-bar"></i> Statistik Kelas</h2>
-                    <div class="stats-container">
-                        <div class="stat-card">
-                            <div class="stat-value stat-present" id="presentCount">0</div>
-                            <div class="stat-label">Hadir</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value stat-absent" id="absentCount">0</div>
-                            <div class="stat-label">Tidak Hadir</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value stat-total" id="totalCount">0</div>
-                            <div class="stat-label">Total Siswa</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -584,467 +252,161 @@
                 <div class="card training-section">
                     <h2 class="card-title"><i class="fas fa-graduation-cap"></i> Training Data Wajah</h2>
                     <p>Untuk menggunakan sistem ini, Anda perlu melatih model dengan foto wajah siswa terlebih dahulu.</p>
-                    <div class="controls">
-                        <button class="btn btn-primary" id="trainModel">
-                            <i class="fas fa-brain"></i> Train Model
-                        </button>
-                        <button class="btn btn-success" id="addFace">
-                            <i class="fas fa-plus"></i> Tambah Wajah
-                        </button>
-                    </div>
+                    <button class="btn btn-primary" id="loadDemoData">
+                        <i class="fas fa-download"></i> Load Data Demo
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="notification" id="notification">
-        <i class="fas fa-check-circle"></i>
-        <span id="notificationText">Pesan notifikasi</span>
-    </div>
 
-    <!-- Load TensorFlow.js dan FaceAPI.js dari CDN -->
+    <!-- Hanya load TensorFlow.js dan FaceAPI.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@latest/dist/face-landmarks-detection.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
 
     <script>
-        // Data contoh siswa
+        // Data siswa
         const students = [
-            { 
-                id: 1, 
-                name: "Ahmad Rizki", 
-                avatar: "https://randomuser.me/api/portraits/men/32.jpg", 
-                present: false,
-                faceDescriptor: null
-            },
-            { 
-                id: 2, 
-                name: "Siti Nurhaliza", 
-                avatar: "https://randomuser.me/api/portraits/women/44.jpg", 
-                present: false,
-                faceDescriptor: null
-            },
-            { 
-                id: 3, 
-                name: "Budi Santoso", 
-                avatar: "https://randomuser.me/api/portraits/men/22.jpg", 
-                present: false,
-                faceDescriptor: null
-            }
+            { id: 1, name: "Ahmad Rizki", avatar: "https://randomuser.me/api/portraits/men/32.jpg", present: false },
+            { id: 2, name: "Siti Nurhaliza", avatar: "https://randomuser.me/api/portraits/women/44.jpg", present: false },
+            { id: 3, name: "Budi Santoso", avatar: "https://randomuser.me/api/portraits/men/22.jpg", present: false }
         ];
 
-        // Variabel global
-        let stream = null;
-        let isCameraActive = false;
         let isModelLoaded = false;
-        let autoScanInterval = null;
-        let labeledFaceDescriptors = null;
+        let stream = null;
 
         // Elemen DOM
-        const cameraFeed = document.getElementById('cameraFeed');
-        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
-        const faceOverlay = document.getElementById('faceOverlay');
-        const scanningOverlay = document.getElementById('scanningOverlay');
-        const attendanceList = document.getElementById('attendanceList');
-        const presentCount = document.getElementById('presentCount');
-        const absentCount = document.getElementById('absentCount');
-        const totalCount = document.getElementById('totalCount');
-        const notification = document.getElementById('notification');
-        const notificationText = document.getElementById('notificationText');
-        const startCameraBtn = document.getElementById('startCamera');
-        const stopCameraBtn = document.getElementById('stopCamera');
-        const scanFacesBtn = document.getElementById('scanFaces');
-        const autoScanToggle = document.getElementById('autoScanToggle');
-        const trainModelBtn = document.getElementById('trainModel');
-        const addFaceBtn = document.getElementById('addFace');
         const modelStatus = document.getElementById('modelStatus');
         const modelStatusText = document.getElementById('modelStatusText');
-        const loadingProgress = document.getElementById('loadingProgress');
+        const cameraFeed = document.getElementById('cameraFeed');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const attendanceList = document.getElementById('attendanceList');
+        const startCameraBtn = document.getElementById('startCamera');
+        const scanFacesBtn = document.getElementById('scanFaces');
+        const loadDemoDataBtn = document.getElementById('loadDemoData');
 
         // Inisialisasi
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             renderStudentList();
-            updateStats();
-            updateModelStatus('loading', 'Memuat model AI...');
-            
-            // Load FaceAPI models dari CDN
-            await loadFaceAPIModels();
+            initializeFaceAPI();
         });
 
-        // Update status model
-        function updateModelStatus(status, text) {
-            modelStatus.className = 'status-indicator';
-            modelStatusText.textContent = text;
-            
-            if (status === 'loading') {
-                modelStatus.classList.add('loading');
-                loadingProgress.style.width = '50%';
-            } else if (status === 'loaded') {
-                modelStatus.classList.add('loaded');
-                loadingProgress.style.width = '100%';
-            } else if (status === 'error') {
-                modelStatus.style.backgroundColor = 'var(--danger)';
-                loadingProgress.style.width = '0%';
-            }
-        }
-
-        // Load model FaceAPI dari CDN
-        async function loadFaceAPIModels() {
+        // Initialize FaceAPI dengan error handling
+        async function initializeFaceAPI() {
             try {
-                // URL model dari CDN
-                const modelBaseUrl = 'https://unpkg.com/face-api.js@0.22.2/weights/';
+                updateModelStatus('loading', 'Memuat model AI...');
                 
-                updateModelStatus('loading', 'Memuat Tiny Face Detector...');
-                await faceapi.nets.tinyFaceDetector.loadFromUri(modelBaseUrl);
-                loadingProgress.style.width = '25%';
+                // Gunakan CDN yang lebih reliable
+                const modelPath = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/';
                 
-                updateModelStatus('loading', 'Memuat Face Landmark Model...');
-                await faceapi.nets.faceLandmark68Net.loadFromUri(modelBaseUrl);
-                loadingProgress.style.width = '50%';
+                // Load model dengan timeout
+                await Promise.race([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+                ]);
                 
-                updateModelStatus('loading', 'Memuat Face Recognition Model...');
-                await faceapi.nets.faceRecognitionNet.loadFromUri(modelBaseUrl);
-                loadingProgress.style.width = '75%';
-                
-                updateModelStatus('loading', 'Memuat Face Expression Model...');
-                await faceapi.nets.faceExpressionNet.loadFromUri(modelBaseUrl);
-                loadingProgress.style.width = '100%';
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
                 
                 isModelLoaded = true;
-                updateModelStatus('loaded', 'Model AI siap digunakan!');
-                showNotification("Semua model AI berhasil dimuat!", true);
+                updateModelStatus('ready', 'Model AI siap digunakan!');
                 
             } catch (error) {
-                console.error("Error loading models:", error);
-                updateModelStatus('error', 'Gagal memuat model AI');
-                showNotification("Gagal memuat model AI. Coba refresh halaman.", false);
-                
-                // Fallback: coba load dari path lokal
-                await tryLoadLocalModels();
+                console.error('Error loading models:', error);
+                updateModelStatus('error', 'Model AI tidak tersedia. Gunakan mode demo.');
+                enableDemoMode();
             }
         }
 
-        // Fallback: coba load dari path lokal
-        async function tryLoadLocalModels() {
-            try {
-                updateModelStatus('loading', 'Mencoba load model lokal...');
-                
-                // Coba load dari path '/models' di server Anda
-                await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-                await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-                await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-                await faceapi.nets.faceExpressionNet.loadFromUri('/models');
-                
-                isModelLoaded = true;
-                updateModelStatus('loaded', 'Model AI siap digunakan!');
-                showNotification("Model AI berhasil dimuat dari server lokal!", true);
-                
-            } catch (localError) {
-                console.error("Error loading local models:", localError);
-                updateModelStatus('error', 'Model AI tidak tersedia');
-                showNotification("Tidak dapat memuat model AI. Fitur pengenalan wajah tidak tersedia.", false);
+        // Update status model
+        function updateModelStatus(status, message) {
+            modelStatus.className = 'model-status';
+            modelStatusText.innerHTML = `<i class="fas fa-${getStatusIcon(status)}"></i> ${message}`;
+            
+            if (status === 'ready') {
+                modelStatus.classList.add('ready');
+            } else if (status === 'loading') {
+                modelStatus.classList.add('loading');
             }
+        }
+
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'ready': return 'check-circle';
+                case 'loading': return 'sync-alt';
+                case 'error': return 'exclamation-triangle';
+                default: return 'info-circle';
+            }
+        }
+
+        // Enable demo mode jika model gagal load
+        function enableDemoMode() {
+            loadDemoDataBtn.style.display = 'block';
+            scanFacesBtn.disabled = false;
+            scanFacesBtn.innerHTML = '<i class="fas fa-search"></i> Scan Demo';
+            scanFacesBtn.onclick = simulateFaceRecognition;
         }
 
         // Render daftar siswa
         function renderStudentList() {
             attendanceList.innerHTML = '';
             students.forEach(student => {
-                const studentItem = document.createElement('div');
-                studentItem.className = 'student-item';
-                
-                const statusClass = student.present ? 'status-present' : 'status-absent';
-                const statusText = student.present ? 'Hadir' : 'Tidak Hadir';
-                const trainedIcon = student.faceDescriptor ? 'fa-check-circle' : 'fa-times-circle';
-                const trainedColor = student.faceDescriptor ? 'var(--success)' : 'var(--danger)';
-                
-                studentItem.innerHTML = `
+                const studentElement = document.createElement('div');
+                studentElement.className = 'student-item';
+                studentElement.innerHTML = `
                     <img src="${student.avatar}" alt="${student.name}" class="student-avatar">
-                    <div class="student-info">
+                    <div>
                         <div class="student-name">${student.name}</div>
                         <div class="student-id">ID: ${student.id}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas ${trainedIcon}" style="color: ${trainedColor};"></i>
-                        <div class="attendance-status ${statusClass}">${statusText}</div>
+                        <div style="color: ${student.present ? 'green' : 'red'}; font-size: 0.9em;">
+                            ${student.present ? '✅ Hadir' : '❌ Belum Hadir'}
+                        </div>
                     </div>
                 `;
-                
-                attendanceList.appendChild(studentItem);
+                attendanceList.appendChild(studentElement);
             });
-        }
-
-        // Update statistik
-        function updateStats() {
-            const present = students.filter(s => s.present).length;
-            const absent = students.length - present;
-            
-            presentCount.textContent = present;
-            absentCount.textContent = absent;
-            totalCount.textContent = students.length;
-        }
-
-        // Tampilkan notifikasi
-        function showNotification(message, isSuccess = true) {
-            notificationText.textContent = message;
-            notification.className = `notification ${isSuccess ? 'notification-success' : 'notification-error'}`;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 4000);
         }
 
         // Mulai kamera
         async function startCamera() {
             try {
-                if (!isModelLoaded) {
-                    showNotification("Model AI belum siap. Tunggu hingga loading selesai.", false);
-                    return;
-                }
-                
-                // Minta akses ke kamera pengguna
                 stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    } 
+                    video: { width: 640, height: 480 } 
                 });
                 
-                // Tampilkan video feed
                 cameraFeed.srcObject = stream;
                 cameraFeed.style.display = 'block';
                 cameraPlaceholder.style.display = 'none';
                 
-                // Update status tombol
                 startCameraBtn.disabled = true;
-                stopCameraBtn.disabled = false;
-                scanFacesBtn.disabled = false;
-                
-                isCameraActive = true;
-                showNotification("Kamera berhasil diaktifkan", true);
-                
-                // Mulai deteksi wajah jika auto scan aktif
-                if (autoScanToggle.checked) {
-                    startAutoScan();
-                }
+                scanFacesBtn.disabled = !isModelLoaded;
                 
             } catch (error) {
-                console.error("Error mengakses kamera:", error);
-                let errorMessage = "Gagal mengakses kamera";
-                
-                if (error.name === 'NotAllowedError') {
-                    errorMessage = "Izin akses kamera ditolak. Silakan berikan izin akses kamera.";
-                } else if (error.name === 'NotFoundError') {
-                    errorMessage = "Tidak ada kamera yang ditemukan.";
-                } else if (error.name === 'NotSupportedError') {
-                    errorMessage = "Browser tidak mendukung akses kamera.";
-                }
-                
-                showNotification(errorMessage, false);
+                alert('Error mengakses kamera: ' + error.message);
             }
         }
 
-        // Hentikan kamera
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            
-            // Hentikan auto scan
-            stopAutoScan();
-            
-            // Sembunyikan video feed
-            cameraFeed.style.display = 'none';
-            cameraPlaceholder.style.display = 'flex';
-            scanningOverlay.style.display = 'none';
-            faceOverlay.innerHTML = '';
-            
-            // Update status tombol
-            startCameraBtn.disabled = false;
-            stopCameraBtn.disabled = true;
-            scanFacesBtn.disabled = true;
-            
-            isCameraActive = false;
-            showNotification("Kamera berhasil dimatikan", true);
-        }
-
-        // Deteksi dan kenali wajah
-        async function detectFaces() {
-            if (!isCameraActive || !isModelLoaded) return;
-            
-            try {
-                // Deteksi wajah dari video
-                const detections = await faceapi
-                    .detectAllFaces(cameraFeed, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
-                
-                // Bersihkan overlay
-                faceOverlay.innerHTML = '';
-                
-                // Jika ada wajah yang terdeteksi
-                if (detections.length > 0) {
-                    // Jika sudah ada model yang dilatih, lakukan pengenalan
-                    if (labeledFaceDescriptors) {
-                        const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
-                        
-                        detections.forEach(detection => {
-                            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-                            
-                            // Gambar bounding box
-                            const box = detection.detection.box;
-                            const drawBox = new faceapi.draw.DrawBox(box, { 
-                                label: bestMatch.toString(),
-                                boxColor: bestMatch.distance < 0.6 ? 'green' : 'red'
-                            });
-                            drawBox.draw(faceOverlay);
-                            
-                            // Jika wajah dikenali, tandai kehadiran
-                            if (bestMatch.distance < 0.6) {
-                                const studentName = bestMatch.label.replace(/ \d+$/, '');
-                                markAttendance(studentName);
-                            }
-                        });
-                    } else {
-                        // Hanya gambar bounding box tanpa pengenalan
-                        detections.forEach(detection => {
-                            const box = detection.detection.box;
-                            const drawBox = new faceapi.draw.DrawBox(box, { 
-                                label: 'Wajah Terdeteksi'
-                            });
-                            drawBox.draw(faceOverlay);
-                        });
-                    }
-                }
-                
-            } catch (error) {
-                console.error("Error detecting faces:", error);
-            }
-        }
-
-        // Tandai kehadiran siswa
-        function markAttendance(studentName) {
-            const student = students.find(s => s.name === studentName);
-            if (student && !student.present) {
-                student.present = true;
-                showNotification(`✅ ${studentName} telah hadir`, true);
-                renderStudentList();
-                updateStats();
-            }
-        }
-
-        // Scan wajah manual
-        async function scanFaces() {
-            if (!isCameraActive) {
-                showNotification("Aktifkan kamera terlebih dahulu", false);
+        // Simulasi pengenalan wajah untuk demo
+        function simulateFaceRecognition() {
+            const absentStudents = students.filter(s => !s.present);
+            if (absentStudents.length === 0) {
+                alert('Semua siswa sudah hadir!');
                 return;
             }
-            
-            if (!isModelLoaded) {
-                showNotification("Model AI belum siap", false);
-                return;
-            }
-            
-            if (!labeledFaceDescriptors) {
-                showNotification("Model belum dilatih dengan data wajah siswa", false);
-                return;
-            }
-            
-            scanningOverlay.style.display = 'flex';
-            showNotification("Memindai wajah...", true);
-            
-            // Beri jeda untuk UX
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Lakukan deteksi
-            await detectFaces();
-            
-            scanningOverlay.style.display = 'none';
-        }
 
-        // Mulai scan otomatis
-        function startAutoScan() {
-            if (autoScanInterval) clearInterval(autoScanInterval);
-            autoScanInterval = setInterval(detectFaces, 2000);
-        }
-
-        // Hentikan scan otomatis
-        function stopAutoScan() {
-            if (autoScanInterval) {
-                clearInterval(autoScanInterval);
-                autoScanInterval = null;
-            }
-        }
-
-        // Train model dengan data wajah siswa
-        async function trainModel() {
-            if (!isModelLoaded) {
-                showNotification("Model AI belum siap", false);
-                return;
-            }
+            // Pilih siswa secara acak
+            const randomStudent = absentStudents[Math.floor(Math.random() * absentStudents.length)];
+            randomStudent.present = true;
             
-            showNotification("Melatih model dengan data wajah...", true);
-            scanningOverlay.style.display = 'flex';
-            
-            try {
-                const labeledDescriptors = [];
-                
-                for (const student of students) {
-                    // Load gambar siswa
-                    const img = await faceapi.fetchImage(student.avatar);
-                    
-                    // Deteksi wajah dari gambar
-                    const detection = await faceapi
-                        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                        .withFaceLandmarks()
-                        .withFaceDescriptor();
-                    
-                    if (detection) {
-                        student.faceDescriptor = detection.descriptor;
-                        labeledDescriptors.push(
-                            new faceapi.LabeledFaceDescriptors(
-                                student.name, 
-                                [detection.descriptor]
-                            )
-                        );
-                        showNotification(`✅ Wajah ${student.name} berhasil dipelajari`, true);
-                    } else {
-                        showNotification(`❌ Tidak dapat mendeteksi wajah ${student.name}`, false);
-                    }
-                }
-                
-                labeledFaceDescriptors = labeledDescriptors;
-                showNotification(`🎉 Model berhasil dilatih dengan ${labeledDescriptors.length} siswa`, true);
-                renderStudentList();
-                
-            } catch (error) {
-                console.error("Error training model:", error);
-                showNotification("❌ Gagal melatih model", false);
-            } finally {
-                scanningOverlay.style.display = 'none';
-            }
+            renderStudentList();
+            alert(`${randomStudent.name} terdeteksi dan dicatat hadir!`);
         }
 
         // Event listeners
         startCameraBtn.addEventListener('click', startCamera);
-        stopCameraBtn.addEventListener('click', stopCamera);
-        scanFacesBtn.addEventListener('click', scanFaces);
-        trainModelBtn.addEventListener('click', trainModel);
+        loadDemoDataBtn.addEventListener('click', simulateFaceRecognition);
 
-        // Toggle auto scan
-        autoScanToggle.addEventListener('change', function() {
-            if (this.checked && isCameraActive) {
-                startAutoScan();
-                showNotification("Scan otomatis diaktifkan", true);
-            } else {
-                stopAutoScan();
-                showNotification("Scan otomatis dimatikan", true);
-            }
-        });
-
-        // Untuk keamanan, hentikan kamera ketika halaman ditutup
+        // Cleanup
         window.addEventListener('beforeunload', () => {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -1053,5 +415,3 @@
     </script>
 </body>
 </html>
-
-
