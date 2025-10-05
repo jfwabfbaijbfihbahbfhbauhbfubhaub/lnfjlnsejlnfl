@@ -1,27 +1,26 @@
 // Konfigurasi untuk GitHub Pages
 const MODEL_BASE_URL = './models/';
-const SAMPLE_STUDENTS_URL = './students/';
 
-// Data siswa
+// Data siswa dengan gambar yang lebih reliable
 let students = [
     {
         id: 1,
         name: "Ahmad Rizki",
-        avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
         present: false,
         faceDescriptor: null
     },
     {
         id: 2, 
         name: "Siti Nurhaliza",
-        avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
         present: false,
         faceDescriptor: null
     },
     {
         id: 3,
         name: "Budi Santoso", 
-        avatar: "https://randomuser.me/api/portraits/men/22.jpg",
+        avatar: "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=150&h=150&fit=crop&crop=face",
         present: false,
         faceDescriptor: null
     }
@@ -87,32 +86,82 @@ function setupEventListeners() {
     });
 }
 
-// Initialize FaceAPI
+// Initialize FaceAPI dengan error handling yang lebih baik
 async function initializeFaceAPI() {
     try {
-        updateModelStatus('loading', 'Memuat model AI dari GitHub...');
+        updateModelStatus('loading', 'Memuat model AI...');
         
-        // Load model dari folder local
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_BASE_URL);
-        loadingProgress.style.width = '25%';
+        console.log('Memulai loading model dari:', MODEL_BASE_URL);
         
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_BASE_URL);
-        loadingProgress.style.width = '50%';
+        // Load model dengan error handling individual
+        try {
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_BASE_URL);
+            console.log('Tiny Face Detector loaded');
+            loadingProgress.style.width = '25%';
+        } catch (e) {
+            console.error('Error loading Tiny Face Detector:', e);
+            throw new Error('Gagal memuat Tiny Face Detector');
+        }
         
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_BASE_URL);
-        loadingProgress.style.width = '75%';
+        try {
+            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_BASE_URL);
+            console.log('Face Landmark loaded');
+            loadingProgress.style.width = '50%';
+        } catch (e) {
+            console.error('Error loading Face Landmark:', e);
+            throw new Error('Gagal memuat Face Landmark');
+        }
         
-        await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_BASE_URL);
+        try {
+            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_BASE_URL);
+            console.log('Face Recognition loaded');
+            loadingProgress.style.width = '75%';
+        } catch (e) {
+            console.error('Error loading Face Recognition:', e);
+            throw new Error('Gagal memuat Face Recognition');
+        }
+        
+        // Face Expression optional, tidak critical
+        try {
+            await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_BASE_URL);
+            console.log('Face Expression loaded');
+        } catch (e) {
+            console.warn('Face Expression model gagal dimuat, lanjut tanpa ekspresi:', e);
+        }
+        
         loadingProgress.style.width = '100%';
-        
         isModelLoaded = true;
         updateModelStatus('ready', 'Model AI siap digunakan!');
-        showNotification("Semua model AI berhasil dimuat dari repository", "success");
+        showNotification("Semua model AI berhasil dimuat", "success");
         
     } catch (error) {
         console.error("Error loading models:", error);
         updateModelStatus('error', 'Gagal memuat model AI');
-        showNotification("Gagal memuat model. Pastikan folder 'models' tersedia.", "error");
+        showNotification("Error: " + error.message, "error");
+        
+        // Fallback: coba load dari CDN
+        await tryLoadFromCDN();
+    }
+}
+
+// Fallback ke CDN jika local model gagal
+async function tryLoadFromCDN() {
+    try {
+        updateModelStatus('loading', 'Mencoba load dari CDN...');
+        const CDN_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/';
+        
+        await faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL);
+        
+        isModelLoaded = true;
+        updateModelStatus('ready', 'Model AI siap digunakan (CDN)');
+        showNotification("Model berhasil dimuat dari CDN", "success");
+        
+    } catch (cdnError) {
+        console.error("Juga gagal load dari CDN:", cdnError);
+        updateModelStatus('error', 'Model AI tidak tersedia');
+        showNotification("Gagal memuat model AI dari semua sumber", "error");
     }
 }
 
@@ -124,7 +173,7 @@ function updateModelStatus(status, message) {
     modelStatusText.textContent = message;
 }
 
-// Render daftar siswa
+// Render daftar siswa - DIPERBAIKI
 function renderStudentList() {
     attendanceList.innerHTML = '';
     students.forEach(student => {
@@ -137,7 +186,8 @@ function renderStudentList() {
         const trainedIcon = student.faceDescriptor ? 'fa-check text-success' : 'fa-times text-danger';
         
         studentItem.innerHTML = `
-            <img src="${student.avatar}" alt="${student.name}" class="student-avatar">
+            <img src="${student.avatar}" alt="${student.name}" class="student-avatar"
+                 onerror="this.src='https://via.placeholder.com/150/667eea/ffffff?text=${student.name.charAt(0)}'">
             <div class="student-info">
                 <div class="student-name">${student.name}</div>
                 <div class="student-id">ID: ${student.id}</div>
@@ -164,6 +214,108 @@ function updateStats() {
     totalCount.textContent = students.length;
 }
 
+// Train model - DIPERBAIKI dengan error handling
+async function trainModel() {
+    if (!isModelLoaded) {
+        showNotification("Model AI belum siap. Tunggu hingga loading selesai.", "error");
+        return;
+    }
+    
+    showNotification("Memulai training model...", "success");
+    trainModelBtn.disabled = true;
+    trainModelBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Training...';
+    
+    try {
+        const labeledDescriptors = [];
+        let trainedCount = 0;
+        let failedCount = 0;
+        
+        // Clear previous descriptors
+        students.forEach(student => {
+            student.faceDescriptor = null;
+        });
+        
+        for (const student of students) {
+            try {
+                console.log(`Training untuk: ${student.name}`);
+                
+                // Create new image element
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                // Wait for image to load
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error(`Gagal load gambar: ${student.name}`));
+                    img.src = student.avatar + '?t=' + Date.now(); // Cache bust
+                });
+                
+                console.log(`Gambar loaded: ${student.name}`);
+                
+                // Detect face dengan timeout
+                const detection = await Promise.race([
+                    faceapi
+                        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptor(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout detection')), 10000)
+                    )
+                ]);
+                
+                if (detection) {
+                    student.faceDescriptor = detection.descriptor;
+                    labeledDescriptors.push(
+                        new faceapi.LabeledFaceDescriptors(
+                            student.name, 
+                            [detection.descriptor]
+                        )
+                    );
+                    trainedCount++;
+                    console.log(`✅ Berhasil train: ${student.name}`);
+                    showNotification(`✅ ${student.name} berhasil dilatih`, "success");
+                } else {
+                    failedCount++;
+                    console.warn(`❌ Tidak detect wajah: ${student.name}`);
+                    showNotification(`❌ Tidak detect wajah di ${student.name}`, "warning");
+                }
+                
+            } catch (studentError) {
+                failedCount++;
+                console.error(`Error training ${student.name}:`, studentError);
+                showNotification(`❌ Error training ${student.name}`, "error");
+            }
+            
+            // Small delay antara siswa
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if (labeledDescriptors.length > 0) {
+            labeledFaceDescriptors = labeledDescriptors;
+            faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+            
+            const message = `🎉 Model trained: ${trainedCount} berhasil, ${failedCount} gagal`;
+            showNotification(message, "success");
+            console.log('Training completed:', { trainedCount, failedCount });
+            
+        } else {
+            showNotification("❌ Tidak ada wajah yang berhasil dilatih", "error");
+        }
+        
+        renderStudentList();
+        
+    } catch (error) {
+        console.error("Error dalam proses training:", error);
+        showNotification("❌ Gagal training model: " + error.message, "error");
+    } finally {
+        trainModelBtn.disabled = false;
+        trainModelBtn.innerHTML = '<i class="fas fa-brain"></i> Train Model';
+    }
+}
+
+// Fungsi-fungsi lainnya tetap sama...
+// [Keep all the other functions from the previous version: startCamera, stopCamera, detectFaces, etc.]
+
 // Mulai kamera
 async function startCamera() {
     try {
@@ -185,7 +337,7 @@ async function startCamera() {
         
         startCameraBtn.disabled = true;
         stopCameraBtn.disabled = false;
-        scanFacesBtn.disabled = false;
+        scanFacesBtn.disabled = !faceMatcher;
         
         isCameraActive = true;
         showNotification("Kamera berhasil diaktifkan", "success");
@@ -310,70 +462,18 @@ function stopAutoScan() {
     }
 }
 
-// Train model
-async function trainModel() {
-    if (!isModelLoaded) {
-        showNotification("Model AI belum siap", "error");
-        return;
-    }
-    
-    showNotification("Melatih model dengan data wajah...", "success");
-    scanningOverlay.style.display = 'flex';
-    
-    try {
-        const labeledDescriptors = [];
-        let trainedCount = 0;
-        
-        for (const student of students) {
-            const img = await faceapi.fetchImage(student.avatar);
-            const detection = await faceapi
-                .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
-            
-            if (detection) {
-                student.faceDescriptor = detection.descriptor;
-                labeledDescriptors.push(
-                    new faceapi.LabeledFaceDescriptors(
-                        student.name, 
-                        [detection.descriptor]
-                    )
-                );
-                trainedCount++;
-                showNotification(`✅ Wajah ${student.name} berhasil dipelajari`, "success");
-            } else {
-                showNotification(`❌ Tidak dapat mendeteksi wajah ${student.name}`, "error");
-            }
-        }
-        
-        if (labeledDescriptors.length > 0) {
-            labeledFaceDescriptors = labeledDescriptors;
-            faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
-            showNotification(`🎉 Model berhasil dilatih dengan ${trainedCount} siswa`, "success");
-        } else {
-            showNotification("❌ Tidak ada wajah yang berhasil dipelajari", "error");
-        }
-        
-        renderStudentList();
-        
-    } catch (error) {
-        console.error("Error training model:", error);
-        showNotification("❌ Gagal melatih model", "error");
-    } finally {
-        scanningOverlay.style.display = 'none';
-    }
-}
-
 // Load sample data
 async function loadSampleData() {
     showNotification("Memuat data sample...", "success");
     
-    // Simulasi loading data sample
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    // Reset semua kehadiran
     students.forEach(student => {
-        student.present = Math.random() > 0.5;
+        student.present = false;
     });
+    
+    // Acak beberapa siswa sebagai hadir
+    const randomIndex = Math.floor(Math.random() * students.length);
+    students[randomIndex].present = true;
     
     renderStudentList();
     updateStats();
