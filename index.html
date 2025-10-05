@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Wajah dengan AI</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px 0;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo i {
+            font-size: 2rem;
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 50px;
+        }
+        
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .card-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            font-size: 1.2rem;
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #e9ecef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .camera-placeholder {
+            text-align: center;
+            color: var(--gray);
+        }
+        
+        .camera-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            color: var(--gray);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary);
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .attendance-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .student-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s;
+        }
+        
+        .student-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .student-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .student-info {
+            flex: 1;
+        }
+        
+        .student-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .student-id {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .attendance-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-present {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: var(--success);
+        }
+        
+        .status-absent {
+            background-color: rgba(247, 37, 133, 0.2);
+            color: var(--danger);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(150%);
+            transition: transform 0.4s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification-success {
+            background-color: var(--success);
+        }
+        
+        .notification-error {
+            background-color: var(--danger);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .stat-present {
+            color: var(--success);
+        }
+        
+        .stat-absent {
+            color: var(--danger);
+        }
+        
+        .stat-total {
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-user-check"></i>
+                    <h1>Sistem Absensi Wajah AI</h1>
+                </div>
+                <div class="user-info">
+                    <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Guru">
+                    <span>Pak Budi, Guru Matematika</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="left-column">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-camera"></i> Kamera Absensi</h2>
+                    <div class="camera-container">
+                        <div class="camera-placeholder">
+                            <i class="fas fa-camera"></i>
+                            <p>Kamera siap untuk memindai wajah siswa</p>
+                        </div>
+                        <!-- Video feed akan ditampilkan di sini -->
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-primary" id="startCamera">
+                            <i class="fas fa-play"></i> Mulai Kamera
+                        </button>
+                        <button class="btn btn-success" id="scanFaces">
+                            <i class="fas fa-search"></i> Scan Wajah
+                        </button>
+                        <button class="btn btn-danger" id="stopCamera">
+                            <i class="fas fa-stop"></i> Hentikan Kamera
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-chart-bar"></i> Statistik Kelas</h2>
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-value stat-present" id="presentCount">0</div>
+                            <div class="stat-label">Hadir</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value stat-absent" id="absentCount">0</div>
+                            <div class="stat-label">Tidak Hadir</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value stat-total" id="totalCount">0</div>
+                            <div class="stat-label">Total Siswa</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-users"></i> Daftar Kehadiran</h2>
+                    <div class="attendance-list" id="attendanceList">
+                        <!-- Daftar siswa akan dimuat di sini -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationText">Pesan notifikasi</span>
+    </div>
+
+    <script>
+        // Data contoh siswa
+        const students = [
+            { id: 1, name: "Ahmad Rizki", avatar: "https://randomuser.me/api/portraits/men/32.jpg", present: false },
+            { id: 2, name: "Siti Nurhaliza", avatar: "https://randomuser.me/api/portraits/women/44.jpg", present: false },
+            { id: 3, name: "Budi Santoso", avatar: "https://randomuser.me/api/portraits/men/22.jpg", present: false },
+            { id: 4, name: "Dewi Lestari", avatar: "https://randomuser.me/api/portraits/women/68.jpg", present: false },
+            { id: 5, name: "Rizky Pratama", avatar: "https://randomuser.me/api/portraits/men/64.jpg", present: false },
+            { id: 6, name: "Maya Sari", avatar: "https://randomuser.me/api/portraits/women/26.jpg", present: false },
+            { id: 7, name: "Fajar Hidayat", avatar: "https://randomuser.me/api/portraits/men/76.jpg", present: false },
+            { id: 8, name: "Indah Permata", avatar: "https://randomuser.me/api/portraits/women/56.jpg", present: false }
+        ];
+
+        // Elemen DOM
+        const attendanceList = document.getElementById('attendanceList');
+        const presentCount = document.getElementById('presentCount');
+        const absentCount = document.getElementById('absentCount');
+        const totalCount = document.getElementById('totalCount');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const startCameraBtn = document.getElementById('startCamera');
+        const stopCameraBtn = document.getElementById('stopCamera');
+        const scanFacesBtn = document.getElementById('scanFaces');
+
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', function() {
+            renderStudentList();
+            updateStats();
+        });
+
+        // Render daftar siswa
+        function renderStudentList() {
+            attendanceList.innerHTML = '';
+            students.forEach(student => {
+                const studentItem = document.createElement('div');
+                studentItem.className = 'student-item';
+                
+                const statusClass = student.present ? 'status-present' : 'status-absent';
+                const statusText = student.present ? 'Hadir' : 'Tidak Hadir';
+                
+                studentItem.innerHTML = `
+                    <img src="${student.avatar}" alt="${student.name}" class="student-avatar">
+                    <div class="student-info">
+                        <div class="student-name">${student.name}</div>
+                        <div class="student-id">ID: ${student.id}</div>
+                    </div>
+                    <div class="attendance-status ${statusClass}">${statusText}</div>
+                `;
+                
+                attendanceList.appendChild(studentItem);
+            });
+        }
+
+        // Update statistik
+        function updateStats() {
+            const present = students.filter(s => s.present).length;
+            const absent = students.length - present;
+            
+            presentCount.textContent = present;
+            absentCount.textContent = absent;
+            totalCount.textContent = students.length;
+        }
+
+        // Tampilkan notifikasi
+        function showNotification(message, isSuccess = true) {
+            notificationText.textContent = message;
+            notification.className = `notification ${isSuccess ? 'notification-success' : 'notification-error'}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Simulasi pemindaian wajah
+        function simulateFaceScan() {
+            // Dalam implementasi nyata, ini akan menggunakan API AI untuk mengenali wajah
+            // Di sini kita hanya mensimulasikan dengan memilih siswa secara acak
+            
+            const absentStudents = students.filter(s => !s.present);
+            if (absentStudents.length === 0) {
+                showNotification("Semua siswa sudah hadir!", true);
+                return;
+            }
+            
+            // Pilih 1-3 siswa secara acak untuk dianggap hadir
+            const randomCount = Math.min(Math.floor(Math.random() * 3) + 1, absentStudents.length);
+            for (let i = 0; i < randomCount; i++) {
+                const randomIndex = Math.floor(Math.random() * absentStudents.length);
+                const student = absentStudents[randomIndex];
+                student.present = true;
+                
+                // Hapus dari daftar absent untuk menghindari duplikasi
+                absentStudents.splice(randomIndex, 1);
+                
+                showNotification(`${student.name} telah terdeteksi dan dicatat hadir`, true);
+            }
+            
+            renderStudentList();
+            updateStats();
+        }
+
+        // Event listeners untuk tombol
+        startCameraBtn.addEventListener('click', function() {
+            showNotification("Kamera berhasil diaktifkan", true);
+            // Dalam implementasi nyata, ini akan mengaktifkan kamera pengguna
+        });
+
+        stopCameraBtn.addEventListener('click', function() {
+            showNotification("Kamera berhasil dimatikan", true);
+            // Dalam implementasi nyata, ini akan mematikan kamera pengguna
+        });
+
+        scanFacesBtn.addEventListener('click', function() {
+            showNotification("Memindai wajah siswa...", true);
+            setTimeout(simulateFaceScan, 1500);
+        });
+    </script>
+</body>
+</html>
