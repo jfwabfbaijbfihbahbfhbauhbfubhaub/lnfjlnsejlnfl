@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Absensi Wajah dengan FaceAPI.js</title>
     <style>
+        /* CSS sama seperti sebelumnya */
         :root {
             --primary: #4361ee;
             --secondary: #3f37c9;
@@ -126,7 +127,7 @@
             height: 100%;
             object-fit: cover;
             display: none;
-            transform: scaleX(-1); /* Mirror effect untuk kamera depan */
+            transform: scaleX(-1);
         }
         
         .camera-placeholder {
@@ -426,6 +427,54 @@
             border-radius: 8px;
         }
         
+        .loading-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #e9ecef;
+            border-radius: 2px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            background-color: var(--success);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .model-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--gray);
+        }
+        
+        .status-indicator.loaded {
+            background-color: var(--success);
+        }
+        
+        .status-indicator.loading {
+            background-color: var(--primary);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -461,6 +510,15 @@
             <div class="left-column">
                 <div class="card">
                     <h2 class="card-title"><i class="fas fa-camera"></i> Kamera Absensi</h2>
+                    
+                    <div class="model-status">
+                        <div class="status-indicator" id="modelStatus"></div>
+                        <span id="modelStatusText">Status Model AI</span>
+                    </div>
+                    <div class="loading-bar">
+                        <div class="loading-progress" id="loadingProgress"></div>
+                    </div>
+                    
                     <div class="camera-container">
                         <div class="camera-placeholder" id="cameraPlaceholder">
                             <i class="fas fa-camera"></i>
@@ -544,13 +602,13 @@
         <span id="notificationText">Pesan notifikasi</span>
     </div>
 
-    <!-- Load FaceAPI.js dari CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@latest"></script>
+    <!-- Load TensorFlow.js dan FaceAPI.js dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@latest/dist/face-landmarks-detection.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@latest/dist/face-api.min.js"></script>
 
     <script>
-        // Data contoh siswa dengan deskriptor wajah
+        // Data contoh siswa
         const students = [
             { 
                 id: 1, 
@@ -570,13 +628,6 @@
                 id: 3, 
                 name: "Budi Santoso", 
                 avatar: "https://randomuser.me/api/portraits/men/22.jpg", 
-                present: false,
-                faceDescriptor: null
-            },
-            { 
-                id: 4, 
-                name: "Dewi Lestari", 
-                avatar: "https://randomuser.me/api/portraits/women/68.jpg", 
                 present: false,
                 faceDescriptor: null
             }
@@ -606,33 +657,92 @@
         const autoScanToggle = document.getElementById('autoScanToggle');
         const trainModelBtn = document.getElementById('trainModel');
         const addFaceBtn = document.getElementById('addFace');
+        const modelStatus = document.getElementById('modelStatus');
+        const modelStatusText = document.getElementById('modelStatusText');
+        const loadingProgress = document.getElementById('loadingProgress');
 
         // Inisialisasi
         document.addEventListener('DOMContentLoaded', async function() {
             renderStudentList();
             updateStats();
+            updateModelStatus('loading', 'Memuat model AI...');
             
-            // Load FaceAPI models
+            // Load FaceAPI models dari CDN
             await loadFaceAPIModels();
         });
 
-        // Load model FaceAPI
+        // Update status model
+        function updateModelStatus(status, text) {
+            modelStatus.className = 'status-indicator';
+            modelStatusText.textContent = text;
+            
+            if (status === 'loading') {
+                modelStatus.classList.add('loading');
+                loadingProgress.style.width = '50%';
+            } else if (status === 'loaded') {
+                modelStatus.classList.add('loaded');
+                loadingProgress.style.width = '100%';
+            } else if (status === 'error') {
+                modelStatus.style.backgroundColor = 'var(--danger)';
+                loadingProgress.style.width = '0%';
+            }
+        }
+
+        // Load model FaceAPI dari CDN
         async function loadFaceAPIModels() {
             try {
-                showNotification("Memuat model AI...", true);
+                // URL model dari CDN
+                const modelBaseUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@latest/weights/';
                 
-                // Load model yang diperlukan
+                updateModelStatus('loading', 'Memuat Tiny Face Detector...');
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelBaseUrl);
+                loadingProgress.style.width = '25%';
+                
+                updateModelStatus('loading', 'Memuat Face Landmark Model...');
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelBaseUrl);
+                loadingProgress.style.width = '50%';
+                
+                updateModelStatus('loading', 'Memuat Face Recognition Model...');
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelBaseUrl);
+                loadingProgress.style.width = '75%';
+                
+                updateModelStatus('loading', 'Memuat Face Expression Model...');
+                await faceapi.nets.faceExpressionNet.loadFromUri(modelBaseUrl);
+                loadingProgress.style.width = '100%';
+                
+                isModelLoaded = true;
+                updateModelStatus('loaded', 'Model AI siap digunakan!');
+                showNotification("Semua model AI berhasil dimuat!", true);
+                
+            } catch (error) {
+                console.error("Error loading models:", error);
+                updateModelStatus('error', 'Gagal memuat model AI');
+                showNotification("Gagal memuat model AI. Coba refresh halaman.", false);
+                
+                // Fallback: coba load dari path lokal
+                await tryLoadLocalModels();
+            }
+        }
+
+        // Fallback: coba load dari path lokal
+        async function tryLoadLocalModels() {
+            try {
+                updateModelStatus('loading', 'Mencoba load model lokal...');
+                
+                // Coba load dari path '/models' di server Anda
                 await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
                 await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
                 await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
                 await faceapi.nets.faceExpressionNet.loadFromUri('/models');
                 
                 isModelLoaded = true;
-                showNotification("Model AI berhasil dimuat!", true);
+                updateModelStatus('loaded', 'Model AI siap digunakan!');
+                showNotification("Model AI berhasil dimuat dari server lokal!", true);
                 
-            } catch (error) {
-                console.error("Error loading models:", error);
-                showNotification("Gagal memuat model AI", false);
+            } catch (localError) {
+                console.error("Error loading local models:", localError);
+                updateModelStatus('error', 'Model AI tidak tersedia');
+                showNotification("Tidak dapat memuat model AI. Fitur pengenalan wajah tidak tersedia.", false);
             }
         }
 
@@ -682,14 +792,14 @@
             
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 3000);
+            }, 4000);
         }
 
         // Mulai kamera
         async function startCamera() {
             try {
                 if (!isModelLoaded) {
-                    showNotification("Model AI belum siap. Tunggu sebentar...", false);
+                    showNotification("Model AI belum siap. Tunggu hingga loading selesai.", false);
                     return;
                 }
                 
@@ -721,7 +831,17 @@
                 
             } catch (error) {
                 console.error("Error mengakses kamera:", error);
-                showNotification("Gagal mengakses kamera: " + error.message, false);
+                let errorMessage = "Gagal mengakses kamera";
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = "Izin akses kamera ditolak. Silakan berikan izin akses kamera.";
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = "Tidak ada kamera yang ditemukan.";
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage = "Browser tidak mendukung akses kamera.";
+                }
+                
+                showNotification(errorMessage, false);
             }
         }
 
@@ -759,8 +879,7 @@
                 const detections = await faceapi
                     .detectAllFaces(cameraFeed, new faceapi.TinyFaceDetectorOptions())
                     .withFaceLandmarks()
-                    .withFaceDescriptors()
-                    .withFaceExpressions();
+                    .withFaceDescriptors();
                 
                 // Bersihkan overlay
                 faceOverlay.innerHTML = '';
@@ -810,7 +929,7 @@
             const student = students.find(s => s.name === studentName);
             if (student && !student.present) {
                 student.present = true;
-                showNotification(`${studentName} telah hadir`, true);
+                showNotification(`✅ ${studentName} telah hadir`, true);
                 renderStudentList();
                 updateStats();
             }
@@ -820,6 +939,11 @@
         async function scanFaces() {
             if (!isCameraActive) {
                 showNotification("Aktifkan kamera terlebih dahulu", false);
+                return;
+            }
+            
+            if (!isModelLoaded) {
+                showNotification("Model AI belum siap", false);
                 return;
             }
             
@@ -843,7 +967,7 @@
         // Mulai scan otomatis
         function startAutoScan() {
             if (autoScanInterval) clearInterval(autoScanInterval);
-            autoScanInterval = setInterval(detectFaces, 2000); // Scan setiap 2 detik
+            autoScanInterval = setInterval(detectFaces, 2000);
         }
 
         // Hentikan scan otomatis
@@ -862,9 +986,8 @@
             }
             
             showNotification("Melatih model dengan data wajah...", true);
+            scanningOverlay.style.display = 'flex';
             
-            // Dalam implementasi nyata, ini akan mengambil gambar wajah dari database
-            // Untuk demo, kita akan menggunakan gambar dari URL
             try {
                 const labeledDescriptors = [];
                 
@@ -886,16 +1009,21 @@
                                 [detection.descriptor]
                             )
                         );
+                        showNotification(`✅ Wajah ${student.name} berhasil dipelajari`, true);
+                    } else {
+                        showNotification(`❌ Tidak dapat mendeteksi wajah ${student.name}`, false);
                     }
                 }
                 
                 labeledFaceDescriptors = labeledDescriptors;
-                showNotification(`Model berhasil dilatih dengan ${labeledDescriptors.length} siswa`, true);
+                showNotification(`🎉 Model berhasil dilatih dengan ${labeledDescriptors.length} siswa`, true);
                 renderStudentList();
                 
             } catch (error) {
                 console.error("Error training model:", error);
-                showNotification("Gagal melatih model", false);
+                showNotification("❌ Gagal melatih model", false);
+            } finally {
+                scanningOverlay.style.display = 'none';
             }
         }
 
