@@ -692,7 +692,7 @@
         async function loadFaceAPIModels() {
             try {
                 // URL model dari CDN
-                const modelBaseUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@latest/weights/';
+                const modelBaseUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/';
                 
                 updateModelStatus('loading', 'Memuat Tiny Face Detector...');
                 await faceapi.nets.tinyFaceDetector.loadFromUri(modelBaseUrl);
@@ -1053,3 +1053,4 @@
     </script>
 </body>
 </html>
+
